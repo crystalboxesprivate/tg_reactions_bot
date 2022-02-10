@@ -1,0 +1,15 @@
+{
+  "name": "tg_reactions_bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Pavlo Khodak",
+  "license": "Unlicense",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "mongoose": "^6.0.12"
+  }
+}
