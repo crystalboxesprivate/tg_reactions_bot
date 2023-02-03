@@ -5,6 +5,7 @@ const dbPath = process.env.DB_PATH;
 const mongoose = require('mongoose');
 
 
+mongoose.set('strictQuery', true);
 mongoose.connection.on('open', (event) => {
     console.log('DB connected.');
 });
@@ -12,7 +13,7 @@ mongoose.connection.on('reconnected', (event) => {
     console.log('DB reconnected.');
 });
 mongoose.connection.on('reconnectFailed', (event) => {
-    console.log('DB reconnect failed.');
+    console.error('DB reconnect failed.');
 });
 mongoose.connection.on('disconnecting', (event) => {
     console.log('Closing DB connection...');
@@ -21,14 +22,14 @@ mongoose.connection.on('close', (event) => {
     console.log('DB connection closed.');
 });
 
-async function start() {
+function start() {
     try{
         const options = { keepAlive: true, keepAliveInitialDelay: 300000 };
-        await mongoose.connect(dbPath, options);
+        mongoose.connect(dbPath, options);
     }
     catch(error) {
-        console.log('Database error (connection):');
-        console.log(error);
+        console.error('Database error (connection):');
+        console.error(error);
     }
 }
 
@@ -38,20 +39,16 @@ function stop() {
 
 function initSchema() {
     try{
-        const reactionSchema = new mongoose.Schema({
+        const Reaction = mongoose.model('Reaction', new mongoose.Schema({
             chat_id: Number,
             message_id: Number,
             user_id: Number,
             text: String,
-        });
-        const Reaction = mongoose.model('Reaction', reactionSchema);
-
-        const chatSettingsSchema = new mongoose.Schema({
+        }));
+        const ChatSettings = mongoose.model('ChatSettings', new mongoose.Schema({
             chat_id: Number,
             defaultReactions: [String],
-        });
-        const ChatSettings = mongoose.model('ChatSettings', chatSettingsSchema);
-
+        }));
         return {
             Reaction,
             ChatSettings,
@@ -66,9 +63,9 @@ function initSchema() {
 
 function saveReaction(chat_id, message_id, user_id, text) {
     const reaction = new Reaction({
-        chat_id: chat_id, 
-        message_id: message_id, 
-        user_id: user_id, 
+        chat_id: chat_id,
+        message_id: message_id,
+        user_id: user_id,
         text: text,
     });
 
@@ -83,25 +80,16 @@ async function getReaction(chat_id, message_id, user_id) {
     }).exec();
 }
 
-async function getReactionCount(chat_id, message_id, text) {
-    return await Reaction.countDocuments({
-        chat_id: chat_id,
-        message_id: message_id,
-        text: text
-    }).exec();
-}
-
-async function getReactions(chat_id, message_id) {
-    return await Reaction.find({
-        chat_id: chat_id,
-        message_id: message_id,
-    }).exec();
-}
-
-async function getReactionsCount(chat_id, message_id) {
+async function countReactions(chat_id, message_id) {
     return await Reaction.aggregate([
         {
-            $group: {_id: '$text', count: {$sum: 1}}
+            $match: {message_id: message_id}
+        },
+        {
+            $group: {
+                _id: '$text',
+                count: {$count: {}}
+            }
         }
     ]).exec();
 }
@@ -120,8 +108,7 @@ function saveChatSettings(chat_id, settings) {
         settings,
         {upsert: true, new: true},
         (err, chatSettings) => {
-            console.log(err);
-            // console.log(chatSettings);
+            console.error(err);
         }
     );
 }
@@ -144,9 +131,7 @@ module.exports = {
     saveReaction: saveReaction,
     deleteReaction: deleteReaction,
     getReaction: getReaction,
-    getReactionCount: getReactionCount,
-    getReactions: getReactions,
-    getReactionsCount: getReactionsCount,
+    countReactions: countReactions,
     saveChatSettings: saveChatSettings,
     getChatSettings: getChatSettings,
 };

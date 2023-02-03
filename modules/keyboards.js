@@ -1,24 +1,28 @@
 require('dotenv').config();
 
+//limitation by Telegram; more in a row won't be shown
 const MAX_COLUMNS = 8;
-const emojiThumbsUp = '\ud83d\udc4d';
-const emojiThumbsDown = '\ud83d\udc4e';
-const defaultButtons = [emojiThumbsUp, emojiThumbsDown];
 
 class Button {
     static make(text) {
-        return new Button(text);
+        return new Button(text, text);
     }
 
-    constructor(text, count = undefined) {
+    static makeWithCount(text, count) {
+        var callback_data = text;
+        if(count > 0) {
+            text += ' ' + count;
+        }
+        return new Button(text, callback_data);
+    }
+
+    constructor(text, callback_data = undefined) {
         this.text = text;
-        this.callback_data = text;
+        this.callback_data = callback_data;
     }
 }
 
 function makeInlineKeyboard(buttons, maxColumns = MAX_COLUMNS) {
-    buttons = buttons.map(Button.make);
-
     var keyboard = [];
     var totalButtons = buttons.length;
     var i = 0;
@@ -29,10 +33,6 @@ function makeInlineKeyboard(buttons, maxColumns = MAX_COLUMNS) {
     }
 
     return {inline_keyboard: keyboard};
-}
-
-function makeDefaultKeyboard(maxColumns = MAX_COLUMNS) {;
-    return makeInlineKeyboard(defaultButtons, maxColumns);
 }
 
 class Keyboard {
@@ -64,12 +64,11 @@ class Keyboard {
     }
 
     update(newReaction, oldReaction = undefined) {
-        
+
     }
 }
 
 module.exports = {
-    defaultButtons: defaultButtons,
+    Button: Button,
     makeInlineKeyboard: makeInlineKeyboard,
-    makeDefaultKeyboard: makeDefaultKeyboard,
 }

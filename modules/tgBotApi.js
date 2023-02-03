@@ -8,17 +8,14 @@ const https = require('https');
 let presetMessages = new Map();
 
 helpMessage = 'Available commands\n\n'
-    + '/edit - specify default reactions for all new messages in this chat\n';
+    + '/help - show list of available commands\n'
+    + '/edit - specify default reactions for new messages in this chat\n';
 presetMessages.set('/help', helpMessage);
 
-// setDefaultsMessage = 'No reactions are selected for this chat. Set default reactions for new messages using /edit';
-// presetMessages.set('setDefaults', setDefaultsMessage);
-permissionDeleteMessage = 'I need permission to delete messages';
-presetMessages.set('permissionDelete', permissionDeleteMessage);
-permissionAdminMessage = 'Only administrators can do that';
-presetMessages.set('permissionAdmin', permissionAdminMessage);
-permissionOwnerMessage = 'Only the chat owner can do that';
-presetMessages.set('permissionOwner', permissionOwnerMessage);
+presetMessages.set('setDefaults', 'No reactions are selected for this chat. Set default reactions for new messages using /edit');
+presetMessages.set('permissionDelete', 'I need permission to delete messages');
+presetMessages.set('permissionAdmin', 'Only chat administrators can do that');
+presetMessages.set('permissionOwner', 'Only the chat owner can do that');
 
 
 function handleUpdatesFromLongPolling(handleUpdate, updates) {
@@ -56,7 +53,7 @@ async function callApiMethodAsync(methodName, methodParams={}) {
                 "Content-Length": Buffer.byteLength(requestJson)
             }
         };
-        
+
         const req = https.request(apiurl + methodName, requestOptions);
         req.on('response', (res) => {
             var responseJson = '';
@@ -70,7 +67,7 @@ async function callApiMethodAsync(methodName, methodParams={}) {
                 else {
                     const errorMsg = `API error ${responseObject.error_code} in ${methodName}`;
                     console.error(errorMsg);
-                    console.error(responseObject.description);    
+                    console.error(responseObject.description);
                     reject(new Error(errorMsg));
                 }
             });
@@ -87,7 +84,7 @@ async function callApiMethodAsync(methodName, methodParams={}) {
             console.error(e);
             reject(e);
         });
-        
+
         req.write(requestJson);
         req.end();
     });
@@ -96,9 +93,9 @@ async function callApiMethodAsync(methodName, methodParams={}) {
 function callApiMethod(methodName, methodParams={}, callbacks={}) {
     const {
         after = ()=>{},
-        handler = (result)=>{}, 
-        onApiError = (responseObject)=>{}, 
-        onResError = (e)=>{}, 
+        handler = (result)=>{},
+        onApiError = (responseObject)=>{},
+        onResError = (e)=>{},
         onReqError = (e)=>{},
     } = callbacks;
 
@@ -109,7 +106,7 @@ function callApiMethod(methodName, methodParams={}, callbacks={}) {
             "Content-Length": Buffer.byteLength(requestJson)
         }
     };
-    
+
     const req = https.request(apiurl + methodName, requestOptions);
     req.on('response', (res) => {
         var responseJson = '';
@@ -123,7 +120,7 @@ function callApiMethod(methodName, methodParams={}, callbacks={}) {
             }
             else {
                 console.error(`API error ${responseObject.error_code} in ${methodName}`);
-                console.error(responseObject.description);    
+                console.error(responseObject.description);
                 onApiError(responseObject);
             }
         });
@@ -140,14 +137,13 @@ function callApiMethod(methodName, methodParams={}, callbacks={}) {
         console.error(e);
         onReqError(e);
     });
-    
+
     req.write(requestJson);
     req.end();
 }
 
 function doLongPolling(handleUpdate, offset) {
-    const methodName = 'getUpdates';
-    const methodParams = {
+    const params = {
         "offset": offset,
         "timeout": pollingTimeout,
     };
@@ -169,11 +165,11 @@ function doLongPolling(handleUpdate, offset) {
         },
     };
 
-    callApiMethod(methodName, methodParams, callbacks);
+    callApiMethod('getUpdates', params, callbacks);
 }
 
 function deleteMessage(message) {
-    const messageToDelete = {
+    const params = {
         chat_id: message.chat.id,
         message_id: message.message_id
     };
@@ -185,7 +181,7 @@ function deleteMessage(message) {
         },
     };
 
-    callApiMethod('deleteMessage', messageToDelete, callbacks);
+    callApiMethod('deleteMessage', params, callbacks);
 }
 
 function copyWithKeyboard(message, keyboard) {
@@ -195,25 +191,46 @@ function copyWithKeyboard(message, keyboard) {
         chat_id: message.chat.id,
         reply_markup: keyboard,
     };
-
     const callbacks = {
         after: () => {
             deleteMessage(message);
         },
     };
-    
+
     callApiMethod('copyMessage', params, callbacks);
 }
 
+function replyWithKeyboard(message, keyboard, text='^') {
+    const params = {
+        reply_to_message_id: message.message_id,
+        chat_id: message.chat.id,
+        text: text,
+        reply_markup: keyboard,
+    }
+
+    callApiMethod('sendMessage', params);
+}
+
+function replaceKeyboard(message, keyboard) {
+    const params = {
+        chat_id: message.chat.id,
+        message_id: message.message_id,
+        reply_markup: keyboard,
+    };
+
+    callApiMethod('editMessageReplyMarkup', params);
+}
+
 function sendTextMessage(chat_id, text, reply_to=undefined) {
-    const messageToSend = {
+    const params = {
         chat_id: chat_id,
         text: text
     }
     if(reply_to !== undefined) {
-        messageToSend.reply_to_message_id = reply_to;
+        params.reply_to_message_id = reply_to;
     }
-    callApiMethod('sendMessage', messageToSend);
+
+    callApiMethod('sendMessage', params);
 }
 
 function sendStandardMessage(chat_id, messageKey, reply_to=undefined) {
@@ -243,6 +260,8 @@ module.exports = {
     callApiMethod: callApiMethod,
     doLongPolling: doLongPolling,
     copyWithKeyboard: copyWithKeyboard,
+    replyWithKeyboard: replyWithKeyboard,
+    replaceKeyboard: replaceKeyboard,
     deleteMessage: deleteMessage,
     sendTextMessage: sendTextMessage,
     sendStandardMessage: sendStandardMessage,

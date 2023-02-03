@@ -1,6 +1,7 @@
-This is an incomplete Telegram bot intended as exercise with NodeJS
+This is a Telegram bot intended as exercise with NodeJS
 
-The bot adds buttons under media messages with emoji or text reactions (now Telegram has reactions as its native feature).
+The bot allows to react to media messages with arbitrary emoji or text reactions.
+These reactions are shown as buttons under the message (an inline keyboard, not the native reactions feature).
 
 No web framework was used, just `https` and `mongoose` for the database.
 
